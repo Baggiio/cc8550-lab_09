@@ -1,7 +1,9 @@
 from datetime import datetime, timedelta
 
 from task_manager.repository import TaskRepository
-from task_manager.task import Priority, Task
+from task_manager.service import TaskService
+from task_manager.task import Priority, Status, Task
+from task_manager.storage import InMemoryStorage
 
 
 def test_save_atribui_id(mocker):
@@ -49,3 +51,39 @@ def test_find_all_retorna_lista(mocker):
 
     mock_storage.get_all.assert_called_once_with()
     assert resultado == tarefas
+
+
+def test_save_funciona_com_subclasse_de_storage():
+    class StoragePersonalizado(InMemoryStorage):
+        def __init__(self):
+            super().__init__()
+            self.registros_add = []
+
+        def add(self, id, item):
+            self.registros_add.append((id, item))
+            super().add(id, item)
+
+    storage = StoragePersonalizado()
+    repo = TaskRepository(storage)
+    task = Task(None, "Generica", "Descricao", Priority.MEDIA, datetime.now() + timedelta(days=1))
+
+    resultado = repo.save(task)
+
+    assert storage.registros_add == [(1, resultado)]
+    assert storage.get(1) is resultado
+
+
+def test_task_service_component_flow():
+    storage = InMemoryStorage()
+    repository = TaskRepository(storage)
+    service = TaskService(repository)
+    prazo = datetime.now() + timedelta(days=3)
+
+    criada = service.criar_tarefa("Integra", "Fluxo completo", Priority.ALTA, prazo)
+    tarefas = list(service.listar_todas())
+    atualizada = service.atualizar_status(criada.id, Status.CONCLUIDA)
+
+    assert criada.id == 1
+    assert storage.get(criada.id) is criada
+    assert len(tarefas) == 1 and tarefas[0] is criada
+    assert atualizada.status is Status.CONCLUIDA

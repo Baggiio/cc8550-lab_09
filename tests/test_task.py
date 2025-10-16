@@ -1,4 +1,5 @@
 import pytest
+from enum import IntEnum
 from datetime import datetime, timedelta
 from task_manager.task import Task, Priority, Status
 
@@ -13,3 +14,7 @@ def test_titulo_curto_invalido():
     task = Task(None, "AB", "Desc", Priority.BAIXA, prazo)
     with pytest.raises(ValueError):
         task.validar()
+
+def test_priority_herda_de_intenum():
+    assert issubclass(Priority, IntEnum)
+    assert Priority.ALTA > Priority.BAIXA
